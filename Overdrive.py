@@ -9,10 +9,10 @@ import tensorflow as tf
 import matplotlib.pyplot as plt
 
 DATASET_PATH = "/audios/datasets"
-PREPARED_DATASET_PATH = "C:\\Users\\Denes Leal\\rep-git\\TG-python\\audios\\prepared_datasets"
+PREPARED_DATASET_PATH = "audios/prepared_datasets"
 JSON_PATH_CLEAN = "data-json\\data-clean.json"
 JSON_PATH_DIST = "data-json\\data-dist.json"
-RESULT_AUDIO_PATH= "C:\\Users\\Denes Leal\\rep-git\\TG-python\\audios\\resultados\\"
+RESULT_AUDIO_PATH = "C:\\Users\\Denes Leal\\rep-git\\TG-python\\audios\\resultados\\"
 SAMPLE_RATE = 22050
 
 
@@ -32,6 +32,7 @@ def load_data(json_path):
     print("Data succesfully loaded!")
 
     return mfcc, mag, ang, freq
+
 
 def plot_history(history):
     """Plots accuracy/loss for training/validation set as a function of the epochs
@@ -57,25 +58,6 @@ def plot_history(history):
     axs[1].set_title("Error eval")
 
     plt.show()
-
-
-def standardize(train, test):
-    mean = np.mean(train, axis=0)
-    std = np.std(train, axis=0)+0.000001
-
-    X_train = (train - mean) / std
-    X_test = (test - mean) /std
-    return X_train, X_test
-
-
-def destandardize(input):
-    mean = np.mean(input, axis=0)
-    std = np.std(input, axis=0)+0.000001
-
-    output = (input + mean) * std
-
-    return output
-
 
 def model_spectrogram():
     mfccc, magc, angc, freqc = load_data(JSON_PATH_CLEAN)
@@ -149,8 +131,8 @@ if __name__ == "__main__":
 
         # train model
         history = model.fit(x_train, y_train, validation_data=(x_test, y_test), batch_size=32, epochs=1000)
-        model.save('saved-models/model-non-standard')
-        #history = tf.keras.models.load_model('saved-models/model1')
+        model.save('models/model-non-standard')
+        #history = tf.keras.models.load_model('models/model1')
 
         plot_history(history)
         print("Gerando predição:")

@@ -1,2 +1,5 @@
 /audios/resultados/*
 /data-json/*
+/audios/prepared_datasets/*
+/audios/clean-old
+/audios/dist-old
