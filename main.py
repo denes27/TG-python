@@ -9,7 +9,7 @@ import numpy as np
 
 #Importar áudios para treino e teste
 
-c1 = AudioSegment.from_file("audios/1.wav")
+c1 = AudioSegment.from_file("audios/datasets/clean/1.wav")
 #c2 = AudioSegment.from_file("audios/2.wav")
 #c3 = AudioSegment.from_file("/audios/3.wav")
 #c4 = AudioSegment.from_file("/audios/mp3/4.mp3")
@@ -20,7 +20,7 @@ c1 = AudioSegment.from_file("audios/1.wav")
 #c9 = AudioSegment.from_file("/audios/mp3/9.mp3")
 #c10 = AudioSegment.from_file("/audios/mp3/10.mp3")
 
-d1 = AudioSegment.from_file("audios/1D.wav")
+d1 = AudioSegment.from_file("audios/datasets/dist/1D-S.wav")
 #d2 = AudioSegment.from_file("audios/2D.wav")
 #d3 = AudioSegment.from_file("/audios/3D.wav")
 #d4 = AudioSegment.from_file("/audios/mp3/4D.mp3")
@@ -34,7 +34,7 @@ d1 = AudioSegment.from_file("audios/1D.wav")
 x_audio = c1 #+ c2# + c3# + c4 + c5 + c6 + c7 + c8 + c9 + c10
 y_audio = d1 #+ d2# + d3# + d4 + d5 + d6 + d7 + d8 + d9 + d10
 
-c11 = AudioSegment.from_file("audios/11.wav")
+c11 = AudioSegment.from_file("audios/datasets/clean/2.wav")
 #c12 = AudioSegment.from_file("audios/12.wav")
 #c13 = AudioSegment.from_file("/audios/13.wav")
 #c14 = AudioSegment.from_file("/audios/mp3/14.mp3")
@@ -44,7 +44,7 @@ c11 = AudioSegment.from_file("audios/11.wav")
 #c18 = AudioSegment.from_file("/audios/mp3/18.mp3")
 #c19 = AudioSegment.from_file("/audios/mp3/19.mp3")
 
-d11 = AudioSegment.from_file("audios/11D.wav")
+d11 = AudioSegment.from_file("audios/datasets/dist/2DS.wav")
 #d12 = AudioSegment.from_file("audios/12D.wav")
 #d13 = AudioSegment.from_file("/audios/13D.wav")
 #d14 = AudioSegment.from_file("/audios/mp3/14D.mp3")
@@ -178,22 +178,25 @@ W,Z = cutsignal(W,Z)
 X_train, X_test, y_train, y_test = X, W, Y, Z
 
 #Gráfico mostrando a diferença na distribuição de um arquivo sem efeito e com efeito
-plt.plot(Y, color='green')
-plt.savefig('graphs/distribuicao-sem-efeito.png', bbox_inches='tight')
-plt.plot(X, color='red')
-plt.savefig('graphs/distribuicao-com-efeito.png', bbox_inches='tight')
+# plt.plot(Y, color='green')
+# plt.savefig('graphs/distribuicao-sem-efeito.png', bbox_inches='tight')
+# plt.plot(X, color='red')
+# plt.savefig('graphs/distribuicao-com-efeito.png', bbox_inches='tight')
 
 #Treinamento do algorítimo
-mlp = MLPRegressor(hidden_layer_sizes=(10), solver='adam', random_state=1)
-mlp.fit(X_train, y_train.ravel())
+print("Treinando algoritmo")
+mlp = MLPRegressor(hidden_layer_sizes=(5), solver='adam', random_state=1)
+mlp.fit(X_train, y_train)
+print("Efetuando previsão")
 y_pred = mlp.predict(X_test)
 
 # Comparação da saída do algorítmo com o valor real
-plt.plot(y_test, color="red") # Valores reais
-plt.plot(y_pred, color='blue') # Valores preditos
-plt.savefig('graphs/comparacao-saida-valorreal.png', bbox_inches='tight')
+# plt.plot(y_test, color="red") # Valores reais
+# plt.plot(y_pred, color='blue') # Valores preditos
+# plt.savefig('graphs/comparacao-saida-valorreal.png', bbox_inches='tight')
 print("R2 Score: ", r2_score(y_pred,y_test)) # R2 Score
 
 
 #Exportação do resultado
-create_mp3("audios/resultados/R7-reshape-invertido.wav", frame_rate, y_pred, normalized=True)
+print("Exportando audio")
+create_mp3("audios/resultados/Rteste-novo-dado.wav", frame_rate, y_pred, normalized=True)

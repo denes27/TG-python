@@ -1,17 +1,14 @@
 import json
-import os
-import math
+
 import librosa
 import soundfile as sf
 import numpy as np
 from sklearn.model_selection import train_test_split
-from sklearn.neural_network import MLPRegressor
 import tensorflow.keras as keras
 import tensorflow as tf
 import matplotlib.pyplot as plt
-from tensorflow.python.client import device_lib
 
-DATASET_PATH = "C:\\Users\\Denes Leal\\rep-git\\TG-python\\audios\\dataset"
+DATASET_PATH = "/audios/datasets"
 PREPARED_DATASET_PATH = "C:\\Users\\Denes Leal\\rep-git\\TG-python\\audios\\prepared_datasets"
 JSON_PATH_CLEAN = "data-json\\data-clean.json"
 JSON_PATH_DIST = "data-json\\data-dist.json"
@@ -19,106 +16,7 @@ RESULT_AUDIO_PATH= "C:\\Users\\Denes Leal\\rep-git\\TG-python\\audios\\resultado
 SAMPLE_RATE = 22050
 
 
-def save_features(dataset_path, num_mfcc=13, n_fft=2048, hop_length=512, num_segments = 1, track_duration=4):
 
-    data_clean = {
-        "mfcc": [],
-        "spectr_mag": [],
-        "spectr_ang": [],
-        "spectr_freq": []
-    }
-
-    data_dist = {
-        "mfcc": [],
-        "spectr_mag": [],
-        "spectr_ang": [],
-        "spectr_freq": []
-    }
-
-    samples_per_track = SAMPLE_RATE * track_duration
-    samples_per_segment = int(samples_per_track / num_segments)
-    num_mfcc_vectors_per_segment = math.ceil(samples_per_segment / hop_length)
-
-    for i, (dirpath, dirnames, filenames) in enumerate(os.walk(dataset_path)):
-
-        if dirpath is not dataset_path:
-            audio_type = dirpath.split("\\")[-1]
-            print("\nProcessando: {}".format(audio_type))
-
-            for f in filenames:
-                print("percorrendo, file: " + f)
-
-                file_path = os.path.join(dirpath, f)
-                signal, sample_rate = librosa.load(file_path, sr=SAMPLE_RATE)
-
-                for d in range(num_segments):
-                    start = samples_per_segment * d
-                    finish = start + samples_per_segment
-
-                    mfcc = librosa.feature.mfcc(y=signal[start:finish],
-                                                sr=sample_rate,
-                                                n_mfcc=num_mfcc,
-                                                n_fft=n_fft,
-                                                hop_length=hop_length)
-                    mfcc = mfcc.T
-
-                    fft = np.fft.fft(signal[start:finish])
-                    magnitude = np.abs(fft)
-                    frequency = np.linspace(0, sample_rate, len(magnitude))
-                    mag = magnitude[:int(len(frequency)/2)]
-                    freq = frequency[:int(len(frequency)/2)]
-                    ang = np.angle(fft)
-
-                    # store only mfcc feature with expected number of vectors
-                    if len(mfcc) == num_mfcc_vectors_per_segment:
-                        print(audio_type)
-                        if audio_type == "clean":
-                            data_clean["mfcc"].append(mfcc.tolist())
-                            data_clean["spectr_mag"].append(list(mag))
-                            data_clean["spectr_ang"].append(list(ang))
-                            data_clean["spectr_freq"].append(list(freq))
-
-                        else:
-                            data_dist["mfcc"].append(mfcc.tolist())
-                            data_dist["spectr_mag"].append(list(mag))
-                            data_dist["spectr_ang"].append(list(ang))
-                            data_dist["spectr_freq"].append(list(freq))
-
-    with open(JSON_PATH_CLEAN, "w") as fp:
-        json.dump(data_clean, fp, indent=4)
-
-    with open(JSON_PATH_DIST, "w") as fp:
-        json.dump(data_clean, fp, indent=4)
-
-
-def prepare_samples(dataset_path, length=4):
-
-    for i, (dirpath, dirnames, filenames) in enumerate(os.walk(dataset_path)):
-
-        if dirpath is not dataset_path:
-
-            for f in filenames:
-                print("percorrendo, file: " + f)
-
-                file_path = os.path.join(dirpath, f)
-                signal, sample_rate = librosa.load(file_path, sr=SAMPLE_RATE)
-
-                duration = librosa.get_duration(y=signal, sr=sample_rate)
-                segments = math.ceil(duration / length)
-                samples_per_segment = sample_rate * length
-
-                print("dados: (duration, segments, num_samples, samples per segment: " + str(duration) + " " + str(segments) + " " + str(samples_per_segment))
-
-                output_path = "audios\prepared_datasets\\" + dirpath.split("\\")[-1] + "\\"
-
-                for d in range(segments):
-                    start = samples_per_segment * d
-                    finish = start + samples_per_segment
-                    if finish < len(signal):
-                        output_file_path = output_path + f + "-" + str(d) + ".wav"
-                        print("montando arquivo: " + output_file_path)
-
-                        sf.write(output_file_path, signal[start:finish], sample_rate, format='wav', subtype='PCM_24')
 
 
 def load_data(json_path):
@@ -170,15 +68,31 @@ def standardize(train, test):
     return X_train, X_test
 
 
+def destandardize(input):
+    mean = np.mean(input, axis=0)
+    std = np.std(input, axis=0)+0.000001
+
+    output = (input + mean) * std
+
+    return output
+
+
+def model_spectrogram():
+    mfccc, magc, angc, freqc = load_data(JSON_PATH_CLEAN)
+    mfccd, magd, angd, freqd = load_data(JSON_PATH_DIST)
+
+    x_train, x_test, y_train, y_test = train_test_split(mfccc, mfccd, test_size=0.3)
+
+
 if __name__ == "__main__":
     #prepare_samples(DATASET_PATH)
-    save_features(PREPARED_DATASET_PATH, num_mfcc=42)
+    #save_features(PREPARED_DATASET_PATH, num_mfcc=42)
     mfccc, magc, angc, freqc = load_data(JSON_PATH_CLEAN)
     mfccd, magd, angd, freqd = load_data(JSON_PATH_DIST)
 
     #Primeira tentativa: usando MFCCs
     x_train, x_test, y_train, y_test = train_test_split(mfccc, mfccd, test_size=0.3)
-    x_train, x_test = standardize(x_train, x_test)
+    #x_train, x_test = standardize(x_train, x_test)
     #y_train, y_test = standardize(y_train, y_test)
 
     # x_train = x_train.reshape(4325, 13)
@@ -234,25 +148,35 @@ if __name__ == "__main__":
         model.summary()
 
         # train model
-        history = model.fit(x_train, y_train, validation_data=(x_test, y_test), batch_size=32, epochs=50)
-        #plot_history(history)
+        history = model.fit(x_train, y_train, validation_data=(x_test, y_test), batch_size=32, epochs=1000)
+        model.save('saved-models/model-non-standard')
+        #history = tf.keras.models.load_model('saved-models/model1')
+
+        plot_history(history)
         print("Gerando predição:")
         # prediction = model.predict(x_test[:100])
         # comparison = model.predict(y_test[:100])
-        file_path = "C:\\Users\\Denes Leal\\rep-git\\TG-python\\audios\\prepared_datasets\\clean\\3.wav-5.wav"
-        signal, sample_rate = librosa.load(file_path, sr=SAMPLE_RATE)
+        file_path1 = "C:\\Users\\Denes Leal\\rep-git\\TG-python\\audios\\prepared_datasets\\clean\\1.wav-2.wav"
+        file_path2 = "C:\\Users\\Denes Leal\\rep-git\\TG-python\\audios\\prepared_datasets\\dist\\1D.wav-2.wav"
+        signal, sample_rate = librosa.load(file_path1, sr=SAMPLE_RATE)
+        signal2, sample_rate2 = librosa.load(file_path2, sr=SAMPLE_RATE)
         mfcc = librosa.feature.mfcc(y=signal,
                                     sr=sample_rate,
                                     n_mfcc=42,
                                     n_fft=2048, hop_length=512)
+        mfcc2 = librosa.feature.mfcc(y=signal2,
+                                    sr=sample_rate2,
+                                    n_mfcc=42,
+                                    n_fft=2048, hop_length=512)
         print(mfcc.shape)
-        comparisonaudio = librosa.feature.inverse.mfcc_to_audio(mfcc, n_mels=42, n_fft=2048, hop_length=512, dct_type=2, norm='ortho',
+        comparisonaudio = librosa.feature.inverse.mfcc_to_audio(mfcc2, n_mels=42, n_fft=2048, hop_length=512, dct_type=2, norm='ortho',
                                                                 ref=1.0,
                                                                 lifter=0)
         mfcc = mfcc.T
         print(mfcc.shape)
         mfcc = mfcc.reshape(-1, 173, 42)
         mfccd = model.predict(np.array(mfcc))
+        #mfccd = destandardize(mfccd)
         print(mfccd.shape)
         mfccd = mfccd[::-1, ::-1].T
         print(mfccd.shape)
