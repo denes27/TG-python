@@ -3,6 +3,8 @@ import math
 import librosa
 import numpy as np
 import json
+
+import AudioPrepper
 from AudioPrepper import SAMPLE_RATE
 import pickle
 
@@ -96,82 +98,107 @@ def save_spectrogram(signals, label='teste', folder='clean', normalize=True):
         spectrogram = np.abs(stft)
         log_spectrogram = librosa.amplitude_to_db(spectrogram)
         # normalizar e salvar minmax (condicional para testar a normalização do output)
-        norm_spect = normalise(log_spectrogram)
-        # Salvando espectrograma de forma (256, 862)
-        if normalize is True:
-            spect_array.append(norm_spect)
-        else:
-            spect_array.append(log_spectrogram)
+        if log_spectrogram.min() != log_spectrogram.max():
+            norm_spect = normalise(log_spectrogram)
+            # Salvando espectrograma de forma (256, 862)
+            if normalize is True:
+                spect_array.append(norm_spect)
+            else:
+                spect_array.append(log_spectrogram)
     np.save(output_path, spect_array)
     return spect_array
+
+
+def extract_normalized_spectrogram(signal):
+    stft = librosa.stft(signal,
+                        n_fft=STD_N_FFT,
+                        hop_length=STD_HOP_LENGTH)[:-1]
+    spectrogram = np.abs(stft)
+    log_spectrogram = librosa.amplitude_to_db(spectrogram)
+    # normalizar e salvar minmax (condicional para testar a normalização do output)
+    norm_spect = normalise(log_spectrogram)
+    return norm_spect
 
 
 def load_spectrogram(label):
     pathX = 'data/spectrograms/clean/' + label + '.npy'
     pathY = 'data/spectrograms/dist/' + label + '.npy'
+    pathZ = 'data/spectrograms/test/' + label + '.npy'
     minmaxpathx = 'minmax/inputs/' + label + '.npy'
     minmaxpathy = 'minmax/outputs/' + label + '.npy'
+    minmaxpathz = 'minmax/test/' + label + '.npy'
     spectX = np.load(pathX)
     spectY = np.load(pathY)
+    spectZ = np.load(pathZ)
     minmaxin = np.load(minmaxpathx)
     minmaxout = np.load(minmaxpathy)
-    return spectX, spectY, minmaxin, minmaxout
+    minmaxtest = np.load(minmaxpathz)
+    return spectX, spectY, spectZ, minmaxin, minmaxout, minmaxtest
 
-
-def load_audio_files():
-    signals_x = []
-    signals_y = []
-    for i, (dirpath, dirnames, filenames) in enumerate(os.walk(AUDIO_PATH)):
-
-        if dirpath is not AUDIO_PATH:
-            folder = dirpath.split("\\")[-1]
-            print("\nProcessando pasta: {}".format(folder))
-
-            for f in filenames:
-                file_path = os.path.join(dirpath, f)
-                signal, _ = librosa.load(file_path, sr=SAMPLE_RATE)
-                if folder == 'clean':
-                    signals_x.append(signal)
-                elif folder == 'dist':
-                    signals_y.append(signal)
-            print("Pasta {} processada.".format(folder))
-    return signals_x, signals_y
 
 
 def normalise(array):
-    norm_array = (array - array.min()) / (array.max() - array.min())
-    norm_array = norm_array * (NORM_MAX - NORM_MIN) + NORM_MIN
-    return norm_array
+    if array.min() != array.max():
+        norm_array = (array - array.min()) / (array.max() - array.min())
+        norm_array = norm_array * (NORM_MAX - NORM_MIN) + NORM_MIN
+        return norm_array
 
 
 def denormalise(norm_array, original_min, original_max):
-    array = (norm_array - NORM_MIN) / (NORM_MAX - NORM_MIN)
-    array = array * (original_max - original_min) + original_min
-    return array
+    if original_min != original_max:
+        array = (norm_array - NORM_MIN) / (NORM_MAX - NORM_MIN)
+        array = array * (original_max - original_min) + original_min
+        return array
 
 
-def save_min_max(inputs, outputs, name='teste', normalize_outputs=False):
+def save_min_max(inputs, outputs, tests, name='teste', normalize_outputs=False):
     minmaxin = []
     minmaxout = []
+    minmaxtest = []
     save_path_in = 'minmax/inputs/' + name  # '.pk1'
     save_path_out = 'minmax/outputs/' + name  # '.pk1'
-    for x, y in zip(inputs, outputs):
+    save_path_test = 'minmax/test/' + name  # '.pk1'
+    for x, y, z in zip(inputs, outputs, tests):
         minmaxin.append((inputs.min(), inputs.max()))
+        minmaxtest.append((tests.min(), tests.max()))
         if normalize_outputs is True:
             minmaxout.append((outputs.min(), outputs.max()))
     np.save(save_path_in, minmaxin)
     np.save(save_path_out, minmaxout)
+    np.save(save_path_test, minmaxtest)
     # with open(save_path, "wb") as f:
     #     pickle.dump(array, f)
 
 
 def prepare_spectrogram_data(label='teste', normalize_output=False):
-    x, y = load_audio_files()
+    x, y, test = AudioPrepper.load_audio_files()
 
     spectx = np.array(save_spectrogram(x, label, 'clean'))
-    specty = np.array(save_spectrogram(y, label, 'dist'))
+    specty = np.array(save_spectrogram(y, label, 'dist', normalize=False))
+    specttest = np.array(save_spectrogram(test, label, 'test'))
 
-    save_min_max(spectx, specty, label, normalize_output)
+    save_min_max(spectx, specty, specttest, label, normalize_output)
+
+
+def convert_spectrograms_to_audio(spectrograms, min_max_values, denormalize=False):
+    signals = []
+    print(np.array(spectrograms).shape)
+    for spectrogram in spectrograms:
+        # reshape the log spectrogram
+        log_spectrogram = spectrogram[:, :, 0]
+        # if denormalize is True:
+        #     # apply denormalisation
+        #     spectrogram = denormalise(
+        #         log_spectrogram, min_max_value["min"], min_max_value["max"])
+
+        # log spectrogram -> spectrogram
+        spec = librosa.db_to_amplitude(log_spectrogram)
+        # apply Griffin-Lim
+        signal = librosa.istft(spec, hop_length=STD_HOP_LENGTH)
+        # append signal to "signals"
+        signals.append(signal)
+    print("Forma após conversão: " + str(np.array(signals).shape))
+    return np.ravel(signals)
 
 
 if __name__ == "__main__":

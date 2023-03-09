@@ -1,3 +1,38 @@
+import os
+import pickle
+
+import tensorflow as tf
+import tensorflow.python.keras.backend
+from tensorflow.keras import Model
+from tensorflow.keras.layers import Input, Conv2D, ReLU, Flatten, Dense, Reshape, Conv2DTranspose, \
+    Activation, Lambda
+
+from tensorflow.keras.layers import BatchNormalization
+from tensorflow.keras import backend as K
+from tensorflow.keras.optimizers.legacy import Adam
+from tensorflow.keras.losses import MeanSquaredError
+import numpy as np
+
+tf.compat.v1.disable_eager_execution()
+
+def _calculate_reconstruction_loss(y_target, y_predicted):
+    error = y_target - y_predicted
+    reconstruction_loss = K.mean(K.square(error), axis=[1, 2, 3])
+    return reconstruction_loss
+
+
+def calculate_kl_loss(model):
+    # wrap `_calculate_kl_loss` such that it takes the model as an argument,
+    # returns a function which can take arbitrary number of arguments
+    # (for compatibility with `metrics` and utility in the loss function)
+    # and returns the kl loss
+    def _calculate_kl_loss(*args):
+        kl_loss = -0.5 * K.sum(1 + model.log_variance - K.square(model.mu) -
+                               K.exp(model.log_variance), axis=1)
+        return kl_loss
+    return _calculate_kl_loss
+
+
 class VAE:
     """
     VAE represents a Deep Convolutional variational autoencoder architecture
@@ -15,7 +50,7 @@ class VAE:
         self.conv_kernels = conv_kernels # [3, 5, 3]
         self.conv_strides = conv_strides # [1, 2, 2]
         self.latent_space_dim = latent_space_dim # 2
-        self.reconstruction_loss_weight = 1000000
+        self.reconstruction_loss_weight = 1000
 
         self.encoder = None
         self.decoder = None
@@ -36,8 +71,8 @@ class VAE:
         optimizer = Adam(learning_rate=learning_rate)
         self.model.compile(optimizer=optimizer,
                            loss=self._calculate_combined_loss,
-                           metrics=[self._calculate_reconstruction_loss,
-                                    self._calculate_kl_loss])
+                           metrics=[_calculate_reconstruction_loss,
+                                    calculate_kl_loss(self)])
 
     def train(self, x_train, batch_size, num_epochs):
         self.model.fit(x_train,
@@ -70,21 +105,11 @@ class VAE:
         return autoencoder
 
     def _calculate_combined_loss(self, y_target, y_predicted):
-        reconstruction_loss = self._calculate_reconstruction_loss(y_target, y_predicted)
-        kl_loss = self._calculate_kl_loss(y_target, y_predicted)
+        reconstruction_loss = _calculate_reconstruction_loss(y_target, y_predicted)
+        kl_loss = calculate_kl_loss(self)()
         combined_loss = self.reconstruction_loss_weight * reconstruction_loss\
                                                          + kl_loss
         return combined_loss
-
-    def _calculate_reconstruction_loss(self, y_target, y_predicted):
-        error = y_target - y_predicted
-        reconstruction_loss = K.mean(K.square(error), axis=[1, 2, 3])
-        return reconstruction_loss
-
-    def _calculate_kl_loss(self, y_target, y_predicted):
-        kl_loss = -0.5 * K.sum(1 + self.log_variance - K.square(self.mu) -
-                               K.exp(self.log_variance), axis=1)
-        return kl_loss
 
     def _create_folder_if_it_doesnt_exist(self, folder):
         if not os.path.exists(folder):
@@ -223,6 +248,36 @@ class VAE:
         x = Lambda(sample_point_from_normal_distribution,
                    name="encoder_output")([self.mu, self.log_variance])
         return x
+
+
+LEARNING_RATE = 0.0005
+BATCH_SIZE = 32
+EPOCHS = 100
+
+
+def load_mnist():
+    (x_train, y_train), (x_test, y_test) = tf.keras.datasets.mnist.load_data()
+
+    x_train = x_train.astype("float32") / 255
+    x_train = x_train.reshape(x_train.shape + (1,))
+    x_test = x_test.astype("float32") / 255
+    x_test = x_test.reshape(x_test.shape + (1,))
+
+    return x_train, y_train, x_test, y_test
+
+
+def train(x_train, learning_rate, batch_size, epochs):
+    autoencoder = VAE(
+        input_shape=(28, 28, 1),
+        conv_filters=(32, 64, 64, 64),
+        conv_kernels=(3, 3, 3, 3),
+        conv_strides=(1, 2, 2, 1),
+        latent_space_dim=2
+    )
+    autoencoder.summary()
+    autoencoder.compile(learning_rate)
+    autoencoder.train(x_train, batch_size, epochs)
+    return autoencoder
 
 
 if __name__ == "__main__":
