@@ -108,7 +108,6 @@ def save_spectrogram(signals, label='teste', folder='clean', normalize=True):
     np.save(output_path, spect_array)
     return spect_array
 
-
 def extract_normalized_spectrogram(signal):
     stft = librosa.stft(signal,
                         n_fft=STD_N_FFT,
@@ -136,6 +135,16 @@ def load_spectrogram(label):
     return spectX, spectY, spectZ, minmaxin, minmaxout, minmaxtest
 
 
+def load_audio_arrays(label='teste'):
+    pathx = AUDIO_PATH + '/clean/' + label + '.npy'
+    pathy = AUDIO_PATH + '/dist/' + label + '.npy'
+    pathz = AUDIO_PATH + '/test/' + label + '.npy'
+
+    datax = np.load(pathx)
+    datay = np.load(pathy)
+    dataz = np.load(pathz)
+
+    return datax, datay, dataz
 
 def normalise(array):
     if array.min() != array.max():

@@ -21,7 +21,7 @@ c1 = AudioSegment.from_file("audios/datasets/clean/1.wav")
 #c10 = AudioSegment.from_file("/audios/mp3/10.mp3")
 
 d1 = AudioSegment.from_file("audios/datasets/dist/1D-S.wav")
-#d2 = AudioSegment.from_file("audios/2D.wav")
+#d2 = AudioSegment.from_file("audios/2.wav")
 #d3 = AudioSegment.from_file("/audios/3D.wav")
 #d4 = AudioSegment.from_file("/audios/mp3/4D.mp3")
 #d5 = AudioSegment.from_file("/audios/mp3/5D.mp3")
@@ -118,10 +118,10 @@ def changePitch(audio, octaves):
 
 # Dados de Treino
 #x_audio = AudioSegment.from_file("/content/drive/MyDrive/UFABC/TG/TG/Python/Audios/Audios Clean/1.wav")
-#y_audio = AudioSegment.from_file("/content/drive/MyDrive/UFABC/TG/TG/Python/Audios/Audios Drive/1D.wav")
+#y_audio = AudioSegment.from_file("/content/drive/MyDrive/UFABC/TG/TG/Python/Audios/Audios Drive/1.wav")
 
 #x_rate, X = wavfile.read("/content/drive/MyDrive/UFABC/TG/TG/Python/Audios/Audios Clean/1.wav")
-#y_rate, Y = wavfile.read("/content/drive/MyDrive/UFABC/TG/TG/Python/Audios/Audios Drive/1D.wav")
+#y_rate, Y = wavfile.read("/content/drive/MyDrive/UFABC/TG/TG/Python/Audios/Audios Drive/1.wav")
 
 x_audio, y_audio = cutsignal(x_audio, y_audio)
 
@@ -135,7 +135,7 @@ Y = topcm(y_data)
 # Dados de Teste
 #w_audio = AudioSegment.from_file("/content/drive/MyDrive/UFABC/TG/TG/Python/Audios/Audios Clean/2.wav")
 w_data = w_audio._data
-#z_audio = AudioSegment.from_file("/content/drive/MyDrive/UFABC/TG/TG/Python/Audios/Audios Drive/2D.wav")
+#z_audio = AudioSegment.from_file("/content/drive/MyDrive/UFABC/TG/TG/Python/Audios/Audios Drive/2.wav")
 z_data = z_audio._data
 W = topcm(w_data)
 Z = topcm(z_data)
@@ -143,7 +143,7 @@ Z = topcm(z_data)
 # Z = z_data
 
 #w_rate, W = wavfile.read("/content/drive/MyDrive/UFABC/TG/TG/Python/Audios/Audios Clean/2.wav")
-#z_rate, Z = wavfile.read("/content/drive/MyDrive/UFABC/TG/TG/Python/Audios/Audios Drive/2D.wav")
+#z_rate, Z = wavfile.read("/content/drive/MyDrive/UFABC/TG/TG/Python/Audios/Audios Drive/2.wav")
 
 # Todos os frame_rates são iguais
 print(x_audio.frame_rate, y_audio.frame_rate, w_audio.frame_rate, z_audio.frame_rate)

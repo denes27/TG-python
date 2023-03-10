@@ -139,7 +139,7 @@ if __name__ == "__main__":
         # prediction = model.predict(x_test[:100])
         # comparison = model.predict(y_test[:100])
         file_path1 = "C:\\Users\\Denes Leal\\rep-git\\TG-python\\audios\\prepared_datasets\\clean\\1.wav-2.wav"
-        file_path2 = "C:\\Users\\Denes Leal\\rep-git\\TG-python\\audios\\prepared_datasets\\dist\\1D.wav-2.wav"
+        file_path2 = "C:\\Users\\Denes Leal\\rep-git\\TG-python\\audios\\prepared_datasets\\dist\\1.wav-2.wav"
         signal, sample_rate = librosa.load(file_path1, sr=SAMPLE_RATE)
         signal2, sample_rate2 = librosa.load(file_path2, sr=SAMPLE_RATE)
         mfcc = librosa.feature.mfcc(y=signal,

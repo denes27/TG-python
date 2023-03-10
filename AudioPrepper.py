@@ -3,7 +3,7 @@ import math
 import librosa
 import numpy as np
 import soundfile as sf
-import matplotlib.pyplot as plt
+import DataAnalyzer as da
 
 SAMPLE_RATE = 22050
 AUDIO_PATH = "audios/"
@@ -47,15 +47,31 @@ def obtain_signals(dataset_path):
                 current_directory = dirpath.split("\\")[-1]
                 print(current_directory)
                 if current_directory == 'clean':
+                    print('Adicionando a sinais clean')
                     signals_clean.append(signal)
+                    print(np.array(signals_clean).shape)
                 elif current_directory == 'dist':
+                    print('Adicionando a sinais dist')
                     signals_dist.append(signal)
+                    print(np.array(signals_dist).shape)
                 else:
+                    print('Adicionando a sinais test')
                     signals.append(signal)
-    return np.array(signals_clean).ravel, np.array(signals_dist).ravel, np.array(signals).ravel
+                    print(np.array(signals).shape)
+
+    print(np.array(signals_clean).shape)
+    print(np.array(signals_dist).shape)
+    print(np.array(signals).shape)
+    # da.generate_graph(np.array(signals_clean).ravel(), "obtain signals: signals_clean")
+    # da.generate_graph(np.array(signals_dist).ravel(), "obtain signals: signals_dist")
+    # da.generate_graph(np.array(signals).ravel(), "obtain signals: signals_test")
+
+    return signals_clean, signals_dist, signals
 
 
 def load_audio_files():
+    # Acho que esse processo não garante que os arquivos serão lidos na ordem alfabética, portanto pode ser que arquivos
+    # sejam reconstruídos em ordem aleatoria
     signals_x = []
     signals_y = []
     signals_test = []
@@ -76,6 +92,7 @@ def load_audio_files():
                     signals_test.append(signal)
             print("Pasta {} processada.".format(folder))
     return signals_x, signals_y, signals_test
+
 
 def remove_silences(signal_a, signal_b):
     i = 0
@@ -120,78 +137,105 @@ def apply_padding(signal_a, signal_b):
 
 def normalize_audio(signal):
     print("Normalizando sinal")
-    #print(signal.shape)
-    plt.figure(1)
-    plt.title("signal")
-    plt.plot(signal)
-    plt.show()
+    signal = np.array(signal)
+    print(signal.shape)
+    signal = signal.ravel()
+    print(signal.shape)
+    da.generate_graph(signal, "normalize_audio: signal")
 
     norm_signal = signal + WAV_MAX
+    # da.generate_graph(norm_signal, "normalize_audio: added signal")
 
-    print("Plot 2")
-    plt.figure(2)
-    plt.title("added signal")
-    plt.plot(norm_signal)
-    plt.show()
     norm_signal = norm_signal / (2 * WAV_MAX)
+    # norm_signal = (signal - np.mean(signal)) / np.std(signal)
+    da.generate_graph(norm_signal, "normalize_audio: norm signal")
 
-    print("Plot 3")
-    plt.figure(3)
-    plt.title("norm signal")
-    plt.plot(norm_signal)
-    print("Mostrar")
-    plt.show()
-
-    return norm_signal
+    return norm_signal.reshape(1, -1)
 
 
 def denormalize_audio(signal):
-    denorm_signal = signal * 2 * WAV_MAX
-    return denorm_signal - WAV_MAX
+    print("Desnormalizando sinal")
+    print(signal.shape)
+    signal = np.array(signal).ravel()
+
+    da.generate_graph(signal, 'norm signal')
+    # signal = signal - WAV_MAX
+    # signal = signal - (signal.max()/2)
+    # signal = signal - 0.10
+
+    # da.generate_graph(signal, 'subtracted WAV_MAX signal')
+    denorm_signal = signal * WAV_MAX * 2
+    denorm_signal = denorm_signal - WAV_MAX
+
+    da.generate_graph(denorm_signal, 'denorm signal')
+    return denorm_signal
+
+
+def save_audio_array(signals, label='teste', folder='clean', normalize=True):
+    output_path = PREPARED_AUDIO_PATH + '/' + folder + '/' + label + '.npy'
+    print(signals.shape)
+    np.save(output_path, signals)
+    return signals
 
 
 def prepare_samples(path='datasets', output_path='prepared_datasets', normalized=True):
     print("Obtendo sinais a partir das amostras originais")
     sigs_clean, sigs_dist, sigs = obtain_signals(AUDIO_PATH + path)
-    print("Dividindo sinais em amostras de {} segundos".format(STANDARD_DURATION))
 
     if normalized is True:
         sigs_clean = normalize_audio(sigs_clean)
         sigs_dist = normalize_audio(sigs_dist)
         sigs = normalize_audio(sigs)
 
+    print("Dividindo sinais em amostras de {} segundos".format(STANDARD_DURATION))
     sigs_clean = split_duration(sigs_clean)
     sigs_dist = split_duration(sigs_dist)
     sigs = split_duration(sigs)
+
+    # da.generate_graph(np.array(sigs_clean).ravel(), "after split duration: signals_clean")
+    # da.generate_graph(np.array(sigs_dist).ravel(), "after split duration: signals_dist")
+    # da.generate_graph(np.array(sigs).ravel(), "after split duration: signals_test")
+
     outputs_clean = []
     outputs_dist = []
     outputs_sigs = []
-    print("Removendo silencios e aplicando padding")
-    for sig_a, sig_b, sigs in zip(sigs_clean, sigs_dist, sigs):
-        # verificar se padding deve ser feito antes do split para garantir integridade das amostras
-        sig_b = remove_silences(sig_a, sig_b)
-        sig_a, sig_b = apply_padding(sig_a, sig_b)
-        _ , sigs = apply_padding([], sigs)
-        outputs_clean.append(sig_a)
-        outputs_dist.append(sig_b)
-        outputs_sigs.append(sigs)
+    #print("Removendo silencios e aplicando padding")
+
+    # for sig_a, sig_b, sigs in zip(sigs_clean, sigs_dist, sigs):
+    #     # verificar se padding deve ser feito antes do split para garantir integridade das amostras
+    #     sig_b = remove_silences(sig_a, sig_b)
+    #     sig_a, sig_b = apply_padding(sig_a, sig_b)
+    #     _ , sigs = apply_padding([], sigs)
+    #     outputs_clean.append(sig_a)
+    #     outputs_dist.append(sig_b)
+    #     outputs_sigs.append(sigs)
+
+    # da.generate_graph(np.array(outputs_clean).ravel(), "after silence and padding: signals_clean")
+    da.generate_graph(np.array(sigs_clean).ravel(), "output: signals_clean")
+    # da.generate_graph(np.array(outputs_dist).ravel(), "after silence and padding: signals_dist")
+    da.generate_graph(np.array(sigs_dist).ravel(), "output: signals_dist")
+    # da.generate_graph(np.array(outputs_sigs).ravel(), "after silence and padding: signals_test")
+    da.generate_graph(np.array(sigs).ravel(), "output: signals_test")
 
     i = 0
-    print("Exportando áudios tratados")
-    for signal in outputs_clean:
-        output_audio(signal, str(i), output_path + '/clean')
-        i += 1
-
-    i = 0
-    for signal in outputs_dist:
-        output_audio(signal, str(i) + 'D', output_path + '/dist')
-        i += 1
-
-    i = 0
-    for signal in outputs_sigs:
-        output_audio(signal, str(i), output_path + '/test')
-        i += 1
+    print("Exportando dados dos audios tratados")
+    save_audio_array(np.array(sigs_clean))
+    save_audio_array(np.array(sigs_dist), folder='dist')
+    save_audio_array(np.array(sigs), folder='test')
+    # for signal in outputs_clean:
+    #     output_audio(signal, str(i), output_path + '/clean')
+    #     i += 1
+    #
+    # i = 0
+    # for signal in outputs_dist:
+    #     output_audio(signal, str(i) + 'D', output_path + '/dist')
+    #     i += 1
+    #
+    # i = 0
+    # for signal in outputs_sigs:
+    #     output_audio(signal, str(i), output_path + '/test')
+    #     i += 1
 
 
 if __name__ == "__main__":
-    prepare_samples()
+    prepare_samples(normalized=False)

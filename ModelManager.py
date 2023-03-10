@@ -6,7 +6,7 @@ from sklearn.model_selection import train_test_split
 import numpy as np
 
 BATCH_SIZE = 32
-EPOCHS = 20
+EPOCHS = 10
 TEST_SIZE = 0.3
 
 def train_network(model, inputs, outputs):
