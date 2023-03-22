@@ -8,20 +8,25 @@ import VAE
 import tensorflow as tf
 import DataAnalyzer as da
 
-LEARNING_RATE = 0.0005
+# LEARNING_RATE = 0.000001
+LEARNING_RATE = 0.000000115 # 1,15 * 10^-7
+# LEARNING_RATE = 0.00000024
+# LEARNING_RATE = 0.0000011
+# LEARNING_RATE = 0.000003
+DATA_SIZE = 33075
 
 
 def prepare_classifier_network(label='teste', save_model=False, model_name='model'):
-    #Importar dados
+    # Importar dados
     print('Iniciando preparação do classificador')
     inputs, outputs, _, _, _, _ = DataPrepper.load_spectrogram(label)
-    #Importar modelo
+    # Importar modelo
     print('Gerando modelo')
     model = ClassifierNetwork.generateModel()
-    #Retornar modelo treinado
+    # Retornar modelo treinado
     print('Treinando modelo')
     model, _ = ModelManager.train_network(model, inputs, outputs)
-    #Salvar modelo opcionalmente
+    # Salvar modelo opcionalmente
     if save_model is True:
         print('Salvando modelo')
         ModelManager.save_model(model, model_name)
@@ -40,9 +45,9 @@ def prepare_vae_network(label='teste', save_model=False, model_name='model_vae')
     outputs = np.array(outputs)
 
     # inputs = np.reshape(inputs, (-1, 9, 1813, 1))
-    inputs = np.reshape(inputs, (-1, 16317, 1, 1))
+    inputs = np.reshape(inputs, (-1, DATA_SIZE, 1, 1))
     # outputs = np.reshape(outputs, (-1, 9, 1813, 1))
-    outputs = np.reshape(outputs, (-1, 16317, 1, 1))
+    outputs = np.reshape(outputs, (-1, DATA_SIZE, 1, 1))
 
     print(inputs.shape)
     print(outputs.shape)
@@ -51,7 +56,8 @@ def prepare_vae_network(label='teste', save_model=False, model_name='model_vae')
     print('Gerando modelo')
     vae = VAE.VAE(
         # input_shape=(9, 1813, 1),
-        input_shape=(16317, 1, 1),
+        input_shape=(DATA_SIZE, 1, 1),
+        # input_shape=(16317, 1, 1),
         conv_filters=(512, 256, 128, 64, 32),
         # conv_filters=(1024, 512, 256, 128, 64),
         conv_kernels=(3, 3, 3, 3, 3),
@@ -60,11 +66,20 @@ def prepare_vae_network(label='teste', save_model=False, model_name='model_vae')
         latent_space_dim=128
         # latent_space_dim=256
     )
+
+    # learning_rate = tf.keras.optimizers.schedules.ExponentialDecay(initial_learning_rate=LEARNING_RATE * 100,
+    #                                                                decay_steps=LEARNING_RATE,
+    #                                                                decay_rate=LEARNING_RATE)
+
+    lr_schedule = tf.keras.callbacks.LearningRateScheduler(
+        lambda epoch: LEARNING_RATE)
+        # lambda epoch: 1e-7 * 10 ** (epoch / 20))
+    # tf.summary.scalar('learning_rate', learning_rate)
     vae.compile(LEARNING_RATE)
     vae.model.summary()
     # Retornar modelo treinado
     print('Treinando modelo')
-    trained_vae, _ = ModelManager.train_vae(vae, inputs, outputs)
+    trained_vae, _ = ModelManager.train_vae(vae, inputs, outputs, lr_schedule)
     # Salvar modelo opcionalmente
     if save_model is True:
         print('Salvando modelo')
@@ -90,26 +105,30 @@ def obtain_result_audio_model(model, label='teste', file_name='teste', normalise
 
     # da.generate_graph(data.ravel(), 'test data')
 
-    test_data = np.reshape(data, (-1, 16317, 1, 1))
+    test_data = np.reshape(data, (-1, DATA_SIZE, 1, 1))
     result = model.predict(test_data)
 
     print(result.shape)
-    signal = np.ravel(result)
+
+    signal = result.squeeze().ravel()
     print(signal.shape)
+    da.generate_graph(signal, 'Prediction')
 
-    # da.generate_graph(signal, 'Prediction')
+    if normalised_output is True:
+        signal = AudioPrepper.denormalize_audio(signal)
 
-    signal = AudioPrepper.denormalize_audio(signal)
     print(signal.shape)
     AudioPrepper.output_audio(signal, file_name)
 
 
 if __name__ == "__main__":
     # model = prepare_classifier_network()
-    vae = prepare_vae_network(save_model=True, model_name='vae_audio_input_denorm_512_5')
+    vae = prepare_vae_network(save_model=True, model_name='vae_midi_denorm_5')
 
-    # vae = VAE.VAE.load("models/vae_audio_input_norm2")
+    # vae = VAE.VAE.load("models/vae_midi_norm_1")
 
     model = vae.model
     # obtain_result(model, file_name='vaedelay1')
-    obtain_result_audio_model(model, file_name='vaedrive_audio5')
+    # min loss dados c4: 283
+    # min loss busca lr c3 - c5: 318,2561
+    obtain_result_audio_model(model, file_name='vae_midi_denorm_5')

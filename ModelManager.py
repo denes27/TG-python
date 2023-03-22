@@ -4,10 +4,12 @@ import tensorflow as tf
 import tensorflow.keras as keras
 from sklearn.model_selection import train_test_split
 import numpy as np
+import matplotlib.pyplot as plt
 
 BATCH_SIZE = 32
-EPOCHS = 10
+EPOCHS = 30
 TEST_SIZE = 0.3
+
 
 def train_network(model, inputs, outputs):
     # Dados já vem normalizados
@@ -22,7 +24,7 @@ def train_network(model, inputs, outputs):
     return model, x_test
 
 
-def train_vae(vae, inputs, outputs):
+def train_vae(vae, inputs, outputs, lrs):
     # Dados já vem normalizados
     x_train, x_test, y_train, y_test = train_test_split(inputs, outputs, test_size=TEST_SIZE)
     # x_train = x_train[..., np.newaxis]
@@ -30,13 +32,18 @@ def train_vae(vae, inputs, outputs):
     # y_train = y_train[..., np.newaxis]
     # y_test = y_test[..., np.newaxis]
 
-    vae.model.fit(x_train, y_train, validation_data=(x_test, y_test), batch_size=BATCH_SIZE, epochs=EPOCHS)
+    history = vae.model.fit(x_train, y_train, validation_data=(x_test, y_test), batch_size=BATCH_SIZE, epochs=EPOCHS,
+                            callbacks=[lrs])
+    print("history lr:")
+    plt.semilogx(history.history["lr"], history.history["loss"])
+    plt.axis([1e-8, 1e-1, 0, 1000])
     vae.model.summary()
     return vae, x_test
 
+
 def save_model(model, name):
     save_path = 'models/' + name
-    #tf.keras.models.save_model(model, save_path)
+    # tf.keras.models.save_model(model, save_path)
     model.save(save_path)
 
 

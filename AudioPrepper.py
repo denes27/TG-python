@@ -135,22 +135,26 @@ def apply_padding(signal_a, signal_b):
     return signal_a, signal_b
 
 
-def normalize_audio(signal):
+def normalize_audio(signals):
     print("Normalizando sinal")
-    signal = np.array(signal)
-    print(signal.shape)
-    signal = signal.ravel()
-    print(signal.shape)
-    da.generate_graph(signal, "normalize_audio: signal")
+    signals = np.array(signals)
+    print(signals.shape)
+    da.generate_graph(signals.ravel(), "normalize_audio: signal")
 
-    norm_signal = signal + WAV_MAX
-    # da.generate_graph(norm_signal, "normalize_audio: added signal")
+    norm_signals = []
+    for signal in signals:
+        signal = signal + WAV_MAX
+        # da.generate_graph(norm_signal, "normalize_audio: added signal")
 
-    norm_signal = norm_signal / (2 * WAV_MAX)
-    # norm_signal = (signal - np.mean(signal)) / np.std(signal)
-    da.generate_graph(norm_signal, "normalize_audio: norm signal")
+        signal = signal / (2 * WAV_MAX)
+        norm_signals.append(signal)
+        # norm_signal = (signal - np.mean(signal)) / np.std(signal)
 
-    return norm_signal.reshape(1, -1)
+    norm_signals = np.array(norm_signals)
+    print(norm_signals.shape)
+    da.generate_graph(norm_signals.ravel(), "normalize_audio: norm signal")
+
+    return norm_signals
 
 
 def denormalize_audio(signal):
@@ -178,19 +182,20 @@ def save_audio_array(signals, label='teste', folder='clean', normalize=True):
     return signals
 
 
-def prepare_samples(path='datasets', output_path='prepared_datasets', normalized=True):
+def prepare_samples(path='datasets', output_path='prepared_datasets', normalized=True, split=True, pad=True):
     print("Obtendo sinais a partir das amostras originais")
     sigs_clean, sigs_dist, sigs = obtain_signals(AUDIO_PATH + path)
 
     if normalized is True:
         sigs_clean = normalize_audio(sigs_clean)
-        sigs_dist = normalize_audio(sigs_dist)
+        # sigs_dist = normalize_audio(sigs_dist)
         sigs = normalize_audio(sigs)
 
-    print("Dividindo sinais em amostras de {} segundos".format(STANDARD_DURATION))
-    sigs_clean = split_duration(sigs_clean)
-    sigs_dist = split_duration(sigs_dist)
-    sigs = split_duration(sigs)
+    if split is True:
+        print("Dividindo sinais em amostras de {} segundos".format(STANDARD_DURATION))
+        sigs_clean = split_duration(sigs_clean)
+        sigs_dist = split_duration(sigs_dist)
+        sigs = split_duration(sigs)
 
     # da.generate_graph(np.array(sigs_clean).ravel(), "after split duration: signals_clean")
     # da.generate_graph(np.array(sigs_dist).ravel(), "after split duration: signals_dist")
@@ -201,21 +206,22 @@ def prepare_samples(path='datasets', output_path='prepared_datasets', normalized
     outputs_sigs = []
     #print("Removendo silencios e aplicando padding")
 
-    # for sig_a, sig_b, sigs in zip(sigs_clean, sigs_dist, sigs):
-    #     # verificar se padding deve ser feito antes do split para garantir integridade das amostras
-    #     sig_b = remove_silences(sig_a, sig_b)
-    #     sig_a, sig_b = apply_padding(sig_a, sig_b)
-    #     _ , sigs = apply_padding([], sigs)
-    #     outputs_clean.append(sig_a)
-    #     outputs_dist.append(sig_b)
-    #     outputs_sigs.append(sigs)
+    if pad is True:
+        for sig_a, sig_b, sigs in zip(sigs_clean, sigs_dist, sigs):
+            # verificar se padding deve ser feito antes do split para garantir integridade das amostras
+            # sig_b = remove_silences(sig_a, sig_b) não posso remover silencios assim pq onda volta pro zero a cada periodo
+            sig_a, sig_b = apply_padding(sig_a, sig_b)
+            _, sigs = apply_padding([], sigs)
+            outputs_clean.append(sig_a)
+            outputs_dist.append(sig_b)
+            outputs_sigs.append(sigs)
 
-    # da.generate_graph(np.array(outputs_clean).ravel(), "after silence and padding: signals_clean")
-    da.generate_graph(np.array(sigs_clean).ravel(), "output: signals_clean")
-    # da.generate_graph(np.array(outputs_dist).ravel(), "after silence and padding: signals_dist")
-    da.generate_graph(np.array(sigs_dist).ravel(), "output: signals_dist")
-    # da.generate_graph(np.array(outputs_sigs).ravel(), "after silence and padding: signals_test")
-    da.generate_graph(np.array(sigs).ravel(), "output: signals_test")
+        # da.generate_graph(np.array(outputs_clean).ravel(), "after silence and padding: signals_clean")
+        da.generate_graph(np.array(outputs_clean).ravel(), "output: signals_clean")
+        # da.generate_graph(np.array(outputs_dist).ravel(), "after silence and padding: signals_dist")
+        da.generate_graph(np.array(outputs_dist).ravel(), "output: signals_dist")
+        # da.generate_graph(np.array(outputs_sigs).ravel(), "after silence and padding: signals_test")
+        da.generate_graph(np.array(outputs_sigs).ravel(), "output: signals_test")
 
     i = 0
     print("Exportando dados dos audios tratados")
@@ -238,4 +244,4 @@ def prepare_samples(path='datasets', output_path='prepared_datasets', normalized
 
 
 if __name__ == "__main__":
-    prepare_samples(normalized=False)
+    prepare_samples(normalized=False, split=False, pad=False)
