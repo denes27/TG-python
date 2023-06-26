@@ -17,6 +17,7 @@ DATA_SIZE = 33075
 
 
 def prepare_classifier_network(label='teste', save_model=False, model_name='model'):
+    tf.debugging.set_log_device_placement(True)
     # Importar dados
     print('Iniciando preparação do classificador')
     inputs, outputs, _, _, _, _ = DataPrepper.load_spectrogram(label)
@@ -123,7 +124,35 @@ def obtain_result_audio_model(model, label='teste', file_name='teste', normalise
 
 if __name__ == "__main__":
     # model = prepare_classifier_network()
-    vae = prepare_vae_network(save_model=True, model_name='vae_midi_denorm_5')
+    gpus = tf.config.list_physical_devices('GPU')
+    # physical_devices = tf.config.experimental.list_physical_devices('GPU')
+    # if len(physical_devices) > 0:
+    #     tf.config.experimental.set_memory_growth(physical_devices[0], True)
+    # if gpus:
+    #     # Restrict TensorFlow to only allocate 1GB of memory on the first GPU
+    #     try:
+    #         tf.config.set_logical_device_configuration(
+    #             gpus[0],
+    #             [tf.config.LogicalDeviceConfiguration(memory_limit=4024)])
+    #         logical_gpus = tf.config.list_logical_devices('GPU')
+    #         print(len(gpus), "Physical GPUs,", len(logical_gpus), "Logical GPUs")
+    #     except RuntimeError as e:
+    #         # Virtual devices must be set before GPUs have been initialized
+    #         print(e)
+
+    gpus = tf.config.list_physical_devices('GPU')
+    if gpus:
+        try:
+            # Currently, memory growth needs to be the same across GPUs
+            for gpu in gpus:
+                tf.config.experimental.set_memory_growth(gpu, True)
+            logical_gpus = tf.config.list_logical_devices('GPU')
+            print(len(gpus), "Physical GPUs,", len(logical_gpus), "Logical GPUs")
+        except RuntimeError as e:
+            # Memory growth must be set before GPUs have been initialized
+            print(e)
+
+    vae = prepare_vae_network(save_model=True, model_name='vae_midi_denorm_6')
 
     # vae = VAE.VAE.load("models/vae_midi_norm_1")
 
@@ -131,4 +160,4 @@ if __name__ == "__main__":
     # obtain_result(model, file_name='vaedelay1')
     # min loss dados c4: 283
     # min loss busca lr c3 - c5: 318,2561
-    obtain_result_audio_model(model, file_name='vae_midi_denorm_5')
+    obtain_result_audio_model(model, file_name='vae_midi_denorm_6')

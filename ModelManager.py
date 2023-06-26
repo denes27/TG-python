@@ -7,7 +7,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 BATCH_SIZE = 32
-EPOCHS = 30
+EPOCHS = 500
 TEST_SIZE = 0.3
 
 

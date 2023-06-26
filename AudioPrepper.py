@@ -10,6 +10,7 @@ AUDIO_PATH = "audios/"
 PREPARED_AUDIO_PATH = "audios/prepared_datasets"
 STANDARD_DURATION = 0.74
 WAV_MAX = 32767
+LINUX_PATH_PREFIX = 'audios/datasets/'
 
 
 def split_duration(signals):
@@ -46,11 +47,11 @@ def obtain_signals(dataset_path):
                 print(signal.shape)
                 current_directory = dirpath.split("\\")[-1]
                 print(current_directory)
-                if current_directory == 'clean':
+                if current_directory == LINUX_PATH_PREFIX + 'clean':
                     print('Adicionando a sinais clean')
                     signals_clean.append(signal)
                     print(np.array(signals_clean).shape)
-                elif current_directory == 'dist':
+                elif current_directory == LINUX_PATH_PREFIX + 'dist':
                     print('Adicionando a sinais dist')
                     signals_dist.append(signal)
                     print(np.array(signals_dist).shape)
